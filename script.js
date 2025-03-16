@@ -153,10 +153,6 @@ function endGame() {
     ctx.font = "10px Arial";
     ctx.fillText(lostBalloonsText, canvas.width / 2 - 380, canvas.height / 2 + 110);
     
-    /*let missedSummary = "Globos perdidos:\n" + Object.entries(missedBalloons)
-        .map(([type, count]) => `${type}: ${count}`)
-        .join("\n");
-    alert(missedSummary);*/
 }
 
 update();
