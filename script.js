@@ -150,7 +150,7 @@ function endGame() {
     
     ctx.fillText(`Total globos perdidos:`, canvas.width / 2 - 250, canvas.height / 2 + 70);
     
-    ctx.font = "10px Arial";
+    ctx.font = "15px Arial";
     ctx.fillText(lostBalloonsText, canvas.width / 2 - 380, canvas.height / 2 + 110);
     
 }
