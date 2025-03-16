@@ -11,15 +11,15 @@ let balloonSpeed = 1;
 let spawnRate = 2000; 
 let lastLevelUpTime = Date.now();
 let gameRunning = true;
-let clicks = 0; // Contador de clics válidos para subir de nivel
+let clicks = 0;
+let missedBalloons = {};
 
-// Cargar imágenes de globos según el nivel
 const balloonImages = [
-    'globo.jpg', // Nivel 1
-    'globor.jpg', // Nivel 2
-    'globoa.jpg', // Nivel 3
-    'globon.jpg', // Nivel 4
-    'globov.jpg'  // Nivel 5+
+    'GloboCeleste.jpg',
+    'GloboRojo.jpg',
+    'GloboAzul.jpg',
+    'GloboNaranja.jpg',
+    'GloboClaro.jpg'
 ];
 
 const loadedImages = balloonImages.map(src => {
@@ -29,14 +29,15 @@ const loadedImages = balloonImages.map(src => {
 });
 
 class Balloon {
-    constructor(x, y, radius, speed, img, isScoring, direction) {
+    constructor(x, y, radius, speed, img, isScoring, type, direction) {
         this.x = x;
         this.y = y;
         this.radius = radius;
         this.speed = speed;
         this.img = img;
-        this.isScoring = isScoring; // Determina si este globo suma puntos o no
-        this.direction = direction; // Dirección de movimiento (1 = arriba, -1 = abajo)
+        this.isScoring = isScoring;
+        this.type = type;
+        this.direction = direction;
     }
 
     move() {
@@ -49,7 +50,7 @@ class Balloon {
         } else {
             ctx.beginPath();
             ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-            ctx.fillStyle = "red"; 
+            ctx.fillStyle = "red";
             ctx.fill();
             ctx.stroke();
         }
@@ -62,17 +63,16 @@ function spawnBalloon() {
     let radius = 20;
     let speed = balloonSpeed;
     
-    // Determinar qué imágenes de globos usar según el nivel
     let imgIndex1 = Math.min(level - 1, loadedImages.length - 1);
-    let imgIndex2 = Math.min(level, loadedImages.length - 1); // Segundo tipo de globo
+    let imgIndex2 = Math.min(level, loadedImages.length - 1);
     let isScoring = Math.random() < 0.5;
     let img = isScoring ? loadedImages[imgIndex1] : loadedImages[imgIndex2];
+    let type = isScoring ? balloonImages[imgIndex1] : balloonImages[imgIndex2];
     
-    // Determinar si el globo sube o baja
     let direction = Math.random() < 0.5 ? 1 : -1;
     let startY = direction === 1 ? canvas.height - radius : radius;
     
-    balloons.push(new Balloon(x, startY, radius, speed, img, isScoring, direction));
+    balloons.push(new Balloon(x, startY, radius, speed, img, isScoring, type, direction));
 }
 
 function update() {
@@ -86,16 +86,18 @@ function update() {
         if ((balloon.direction === 1 && balloon.y + balloon.radius < 0) || 
             (balloon.direction === -1 && balloon.y - balloon.radius > canvas.height)) {
             balloons.splice(index, 1);
+            if (balloon.isScoring) {
+                missedBalloons[balloon.type] = (missedBalloons[balloon.type] || 0) + 1;
+            }
         }
     });
 
-    // Mostrar puntaje y nivel
     ctx.fillStyle = "black";
     ctx.font = "20px Arial";
     ctx.fillText(`Puntaje: ${score}`, 10, 30);
     ctx.fillText(`Nivel: ${level}`, 10, 60);
+    ctx.fillText(`Globos perdidos: ${Object.values(missedBalloons).reduce((a, b) => a + b, 0)}`, 10, 90);
 
-    // Comprobar si ha pasado 1 minuto sin subir de nivel
     if (Date.now() - lastLevelUpTime > 60000) {
         endGame();
         return;
@@ -113,18 +115,19 @@ canvas.addEventListener("click", function(event) {
         if (dist < balloon.radius) {
             if (balloon.isScoring) {
                 score++;
-                clicks++; // Contar clics solo en globos válidos
+                clicks++;
             }
             balloons.splice(index, 1);
             
-            if (clicks >= 10) { // Subir de nivel cada 10 clics válidos
+            if (clicks >= 10) {
                 level++;
                 balloonSpeed += 0.5;
                 spawnRate = Math.max(500, spawnRate - 200);
                 clearInterval(spawnInterval);
                 spawnInterval = setInterval(spawnBalloon, spawnRate);
                 lastLevelUpTime = Date.now();
-                clicks = 0; // Reiniciar el contador de clics
+                clicks = 0;
+                alert(`Nivel ${level} alcanzado.`);
             }
         }
     });
@@ -141,6 +144,19 @@ function endGame() {
     ctx.font = "40px Arial";
     ctx.fillText("¡Juego Terminado!", canvas.width / 2 - 150, canvas.height / 2 - 20);
     ctx.fillText(`Puntaje Final: ${score}`, canvas.width / 2 - 100, canvas.height / 2 + 30);
+    let lostBalloonsText = Object.entries(missedBalloons)
+        .map(([type, count]) => `${type}: ${count}`)
+        .join(", ");
+    
+    ctx.fillText(`Total globos perdidos:`, canvas.width / 2 - 250, canvas.height / 2 + 70);
+    
+    ctx.font = "10px Arial";
+    ctx.fillText(lostBalloonsText, canvas.width / 2 - 380, canvas.height / 2 + 110);
+    
+    /*let missedSummary = "Globos perdidos:\n" + Object.entries(missedBalloons)
+        .map(([type, count]) => `${type}: ${count}`)
+        .join("\n");
+    alert(missedSummary);*/
 }
 
 update();
