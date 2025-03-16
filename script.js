@@ -11,6 +11,7 @@ let balloonSpeed = 1;
 let spawnRate = 2000; 
 let lastLevelUpTime = Date.now();
 let gameRunning = true;
+let clicks = 0; // Contador de clics válidos para subir de nivel
 
 // Cargar imágenes de globos según el nivel
 const balloonImages = [
@@ -28,16 +29,18 @@ const loadedImages = balloonImages.map(src => {
 });
 
 class Balloon {
-    constructor(x, y, radius, speed, img) {
+    constructor(x, y, radius, speed, img, isScoring, direction) {
         this.x = x;
         this.y = y;
         this.radius = radius;
         this.speed = speed;
         this.img = img;
+        this.isScoring = isScoring; // Determina si este globo suma puntos o no
+        this.direction = direction; // Dirección de movimiento (1 = arriba, -1 = abajo)
     }
 
     move() {
-        this.y -= this.speed;
+        this.y -= this.speed * this.direction;
     }
 
     draw() {
@@ -59,11 +62,17 @@ function spawnBalloon() {
     let radius = 20;
     let speed = balloonSpeed;
     
-    // Determinar qué imagen de globo usar según el nivel
-    let imgIndex = Math.min(level - 1, loadedImages.length - 1);
-    let img = loadedImages[imgIndex];
-
-    balloons.push(new Balloon(x, canvas.height - radius, radius, speed, img));
+    // Determinar qué imágenes de globos usar según el nivel
+    let imgIndex1 = Math.min(level - 1, loadedImages.length - 1);
+    let imgIndex2 = Math.min(level, loadedImages.length - 1); // Segundo tipo de globo
+    let isScoring = Math.random() < 0.5;
+    let img = isScoring ? loadedImages[imgIndex1] : loadedImages[imgIndex2];
+    
+    // Determinar si el globo sube o baja
+    let direction = Math.random() < 0.5 ? 1 : -1;
+    let startY = direction === 1 ? canvas.height - radius : radius;
+    
+    balloons.push(new Balloon(x, startY, radius, speed, img, isScoring, direction));
 }
 
 function update() {
@@ -74,7 +83,8 @@ function update() {
     balloons.forEach((balloon, index) => {
         balloon.move();
         balloon.draw();
-        if (balloon.y + balloon.radius < 0) {
+        if ((balloon.direction === 1 && balloon.y + balloon.radius < 0) || 
+            (balloon.direction === -1 && balloon.y - balloon.radius > canvas.height)) {
             balloons.splice(index, 1);
         }
     });
@@ -101,16 +111,20 @@ canvas.addEventListener("click", function(event) {
     balloons.forEach((balloon, index) => {
         let dist = Math.sqrt((clickX - balloon.x) ** 2 + (clickY - balloon.y) ** 2);
         if (dist < balloon.radius) {
+            if (balloon.isScoring) {
+                score++;
+                clicks++; // Contar clics solo en globos válidos
+            }
             balloons.splice(index, 1);
-            score++;
             
-            if (score % 10 === 0) { // Subir de nivel cada 10 puntos
+            if (clicks >= 10) { // Subir de nivel cada 10 clics válidos
                 level++;
                 balloonSpeed += 0.5;
                 spawnRate = Math.max(500, spawnRate - 200);
                 clearInterval(spawnInterval);
                 spawnInterval = setInterval(spawnBalloon, spawnRate);
                 lastLevelUpTime = Date.now();
+                clicks = 0; // Reiniciar el contador de clics
             }
         }
     });
